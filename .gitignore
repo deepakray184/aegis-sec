@@ -1,0 +1,20 @@
+# Python virtual environment
+.venv/
+venv/
+ENV/
+
+# Bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Reports output (keep reports directory via .gitkeep)
+reports/audit_*.html
+reports/audit_*.json
+reports/audit_*.md
+!reports/.gitkeep
