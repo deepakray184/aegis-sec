@@ -17,4 +17,5 @@ Thumbs.db
 reports/audit_*.html
 reports/audit_*.json
 reports/audit_*.md
+reports/audit_*.pdf
 !reports/.gitkeep

@@ -18,6 +18,7 @@ from aegis_core.scanner import SecurityAuditor
 from aegis_core.reporters.html_reporter import HTMLReporter
 from aegis_core.reporters.markdown_reporter import MarkdownReporter
 from aegis_core.reporters.json_reporter import JSONReporter
+from aegis_core.reporters.pdf_reporter import PDFReporter
 
 
 # ANSI formatting colors
@@ -69,7 +70,7 @@ def main():
     )
     parser.add_argument("target", nargs="?", help="Target domain or URL (e.g. example.com or https://example.com)")
     parser.add_argument("-o", "--output-dir", default="./reports", help="Directory where reports are saved (default: ./reports)")
-    parser.add_argument("-f", "--format", choices=["all", "html", "md", "json"], default="all", help="Report output format (default: all)")
+    parser.add_argument("-f", "--format", choices=["all", "html", "md", "json", "pdf"], default="all", help="Report output format (default: all)")
     parser.add_argument("-t", "--timeout", type=float, default=8.0, help="HTTP/TLS request timeout in seconds (default: 8.0)")
     parser.add_argument("--view", action="store_true", help="Automatically open generated HTML report in default browser")
     parser.add_argument("--serve", action="store_true", help="Launch the local interactive Web Dashboard & Report Viewer")
@@ -131,10 +132,17 @@ def main():
 
     created_reports = []
 
-    if args.format in ("all", "html"):
+    if args.format in ("all", "html", "pdf"):
         html_path = f"{base_filename}.html"
         HTMLReporter(result).save(html_path)
-        created_reports.append(("HTML Dashboard (PDF-ready)", html_path))
+        if args.format != "pdf":
+            created_reports.append(("HTML Dashboard (Interactive)", html_path))
+
+        # Generate PDF if requested or part of 'all'
+        if args.format in ("all", "pdf"):
+            pdf_path = f"{base_filename}.pdf"
+            if PDFReporter(html_path).generate(pdf_path):
+                created_reports.append(("Executive PDF Document", pdf_path))
 
     if args.format in ("all", "md"):
         md_path = f"{base_filename}.md"

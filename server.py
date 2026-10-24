@@ -17,6 +17,7 @@ from aegis_core.scanner import SecurityAuditor
 from aegis_core.reporters.html_reporter import HTMLReporter
 from aegis_core.reporters.markdown_reporter import MarkdownReporter
 from aegis_core.reporters.json_reporter import JSONReporter
+from aegis_core.reporters.pdf_reporter import PDFReporter
 
 REPORTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "reports"))
 os.makedirs(REPORTS_DIR, exist_ok=True)
@@ -203,10 +204,14 @@ class AegisWebHandler(SimpleHTTPRequestHandler):
             sanitized_domain = result.target.domain.replace(".", "_").replace(":", "_")
             base_filename = f"audit_{sanitized_domain}_{timestamp_slug}"
 
-            # Save HTML, MD, JSON
+            # Save HTML, MD, JSON, PDF
             html_file = f"{base_filename}.html"
             html_path = os.path.join(REPORTS_DIR, html_file)
             HTMLReporter(result).save(html_path)
+
+            pdf_file = f"{base_filename}.pdf"
+            pdf_path = os.path.join(REPORTS_DIR, pdf_file)
+            PDFReporter(html_path).generate(pdf_path)
 
             md_path = os.path.join(REPORTS_DIR, f"{base_filename}.md")
             MarkdownReporter(result).save(md_path)
@@ -248,6 +253,8 @@ class AegisWebHandler(SimpleHTTPRequestHandler):
             content_type = "application/json"
         elif filepath.endswith(".md"):
             content_type = "text/markdown"
+        elif filepath.endswith(".pdf"):
+            content_type = "application/pdf"
 
         try:
             with open(filepath, "rb") as f:
