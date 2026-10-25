@@ -113,6 +113,10 @@ def main():
     print(f"{C_GRAY}{'=' * 72}{C_RESET}")
     print(f"  Target Domain       : {C_BOLD}{t.domain}{C_RESET}")
     print(f"  IP Addresses        : {', '.join(t.ip_addresses) or 'N/A'}")
+    if t.asn or t.isp:
+        print(f"  Network / ASN       : {t.asn or t.isp}{f' ({t.city}, {t.country})' if (t.country or t.city) else ''}")
+    if t.open_ports:
+        print(f"  Open Ports (Shodan) : {C_YELLOW}{C_BOLD}{', '.join(map(str, t.open_ports))}{C_RESET}")
     print(f"  Detected Server     : {t.server_banner or 'Hidden / Cloudflare'}")
     print(f"  Audit Duration      : {s.duration_seconds}s")
     print(f"  Security Score      : {grade_color}{C_BOLD}{s.score} / 100{C_RESET}")

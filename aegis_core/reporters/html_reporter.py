@@ -34,6 +34,11 @@ class HTMLReporter:
         circumference = 2 * 3.14159 * 52
         stroke_offset = circumference - (s.score / 100.0) * circumference
 
+        loc_parts = [p for p in [t.city, t.country] if p]
+        location_display = f" &bull; {html.escape(', '.join(loc_parts))}" if loc_parts else ""
+        open_ports_display = html.escape(", ".join(map(str, t.open_ports))) if t.open_ports else "None flagged"
+        asn_display = html.escape(t.asn or t.isp or "N/A")
+
         # Build Findings HTML
         findings_html = []
         for idx, f in enumerate(r.findings, 1):
@@ -122,6 +127,7 @@ class HTMLReporter:
             ("cookies_cors", "Cookies & CORS"),
             ("exposure", "Information Exposure"),
             ("methods", "HTTP Methods"),
+            ("shodan", "Network & Shodan Intel"),
         ]:
             mod_findings_cnt = sum(1 for f in r.findings if f.category.value.lower().startswith(label.lower()[:5]))
             mod_status_html.append(f"""
@@ -732,6 +738,8 @@ class HTMLReporter:
                 <li><strong>Audited URL:</strong> <a href="{html.escape(t.url)}" target="_blank" style="color: #38bdf8;">{html.escape(t.url)}</a></li>
                 <li><strong>Detected Server:</strong> {html.escape(t.server_banner or 'Masked / Hidden')}</li>
                 <li><strong>IP Addresses:</strong> {html.escape(', '.join(t.ip_addresses) or 'N/A')}</li>
+                <li><strong>Network / ASN:</strong> {asn_display}{location_display}</li>
+                <li><strong>Open Ports (Shodan):</strong> {open_ports_display}</li>
                 <li><strong>Scan Completed:</strong> {t.scan_timestamp} ({s.duration_seconds}s)</li>
             </ul>
         </div>
@@ -771,6 +779,7 @@ class HTMLReporter:
                 {mod_status_html[3]}
                 {mod_status_html[4]}
                 {mod_status_html[5]}
+                {mod_status_html[6] if len(mod_status_html) > 6 else ''}
             </div>
         </div>
     </section>

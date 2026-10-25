@@ -1,6 +1,6 @@
-# 🛡️ AegisSec: End-to-End Website Security Auditor & Report Agent
+# 🛡️ AegisSec: End-to-End Website Security Auditor & Shodan Intelligence Agent
 
-**AegisSec** is an enterprise-grade, defensive vulnerability assessment and security posture auditing agent. Give it any website URL or domain, and it executes a multi-module parallel security audit, computes a weighted risk score and letter grade (A+ to F), and generates professional executive and technical reports in **HTML (PDF-ready)**, **Markdown**, and **JSON**.
+**AegisSec** is an enterprise-grade, defensive vulnerability assessment, threat surface intelligence, and security posture auditing agent. Give it any website URL or domain, and it executes a multi-module parallel security audit, computes a weighted risk score and letter grade (A+ to F), and generates professional executive and technical reports in **PDF (Print-Ready)**, **Interactive HTML**, **Markdown**, and **JSON**.
 
 Designed strictly for authorized penetration testing, DevSecOps pipelines, and defensive security hardening. Zero external dependencies required—runs out of the box on Python 3.8+.
 
@@ -9,7 +9,10 @@ Designed strictly for authorized penetration testing, DevSecOps pipelines, and d
 ## 🚀 Key Features
 
 * **Zero-Dependency Architecture**: Built entirely with the Python Standard Library (`ssl`, `socket`, `urllib`, `concurrent.futures`, `json`, `dataclasses`). Runs immediately without `pip install`.
-* **High-Speed Parallel Auditing**: Executes concurrent audit modules via thread workers in milliseconds.
+* **Shodan & Network Intelligence**:
+  * Integrates **Shodan InternetDB** to discover **publicly open ports** (e.g. 21, 22, 23, 80, 443, 3306, 3389, 8080).
+  * Automatically flags **known CVE vulnerabilities** and software CPEs indexed by Shodan.
+  * Resolves **ASN**, **ISP**, **Hosting Provider**, and **Geographic Location**.
 * **Comprehensive Defensive Security Audit**:
   * **HTTP Security Headers**: Audits 12+ headers including HSTS, CSP (script-src, unsafe-inline/eval), X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, COOP, COEP, CORP.
   * **SSL/TLS & Cryptography**: Certificate validity, expiration alerts, SANs, weak ciphers, deprecated TLS 1.0/1.1 protocols, and plain HTTP-to-HTTPS redirect enforcement.
@@ -17,11 +20,12 @@ Designed strictly for authorized penetration testing, DevSecOps pipelines, and d
   * **Cookie & CORS Hygiene**: Audits `Secure`, `HttpOnly`, `SameSite` flags, and tests for arbitrary origin reflection with credentials (`Access-Control-Allow-Credentials: true`).
   * **Information Exposure Probing**: Safe, non-destructive detection of exposed `.git`, `.env`, `docker-compose.yml`, `web.config`, `robots.txt` path disclosure, and RFC 9116 `security.txt`.
   * **HTTP Methods**: Tests verb tampering and dangerous methods like `TRACE` (Cross-Site Tracing).
-* **CVSS & OWASP Top 10 Mapping**: Every finding is categorized by severity (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `INFO`), mapped to OWASP Top 10 (2021) and CWE IDs.
-* **Copy-Paste Remediation Snippets**: Ready-to-use hardening configs for **Nginx**, **Apache**, **Caddy**, and **Node.js/Express**.
+* **Automated Executive PDF & HTML Generation**:
+  * Built-in headless Chromium engine converts audit results into pixel-perfect executive PDF documents.
 * **Dual Interface**:
   * Fast, ANSI-colored **CLI**.
   * Embedded **Interactive Web Dashboard & Report Viewer** (`--serve`).
+  * **GitHub Pages Web App** (`docs/`) ready for instant web deployment!
 
 ---
 
@@ -29,7 +33,13 @@ Designed strictly for authorized penetration testing, DevSecOps pipelines, and d
 
 ```
 ├── aegis.py                     # Main CLI executable entrypoint
-├── server.py                    # Built-in Web UI & Report Dashboard
+├── server.py                    # Production REST API & Web Dashboard
+├── docs/                        # GitHub Pages static Web Application
+│   ├── index.html               # Modern Tailwind CSS single-page app
+│   └── app.js                   # Interactive client logic & API bridge
+├── render.yaml                  # 1-Click deploy blueprint for Render.com
+├── Procfile                     # Process file for Railway / Render
+├── Dockerfile                   # Container manifest with Chromium
 ├── aegis_core/
 │   ├── config.py                # Audit specifications & probe definitions
 │   ├── models.py                # Finding, TargetInfo, AuditResult data models
@@ -37,6 +47,7 @@ Designed strictly for authorized penetration testing, DevSecOps pipelines, and d
 │   ├── scoring.py               # Weighted score & letter grade calculation
 │   ├── remediation.py           # Actionable config blueprints (Nginx, Apache, etc.)
 │   ├── modules/
+│   │   ├── shodan_auditor.py    # Shodan InternetDB, ASN, & CVE intelligence
 │   │   ├── headers_auditor.py   # HTTP Security Headers & Banner audit
 │   │   ├── tls_auditor.py       # SSL/TLS & Certificate audit
 │   │   ├── dns_auditor.py       # SPF, DMARC, CAA, DNSSEC audit
@@ -44,7 +55,8 @@ Designed strictly for authorized penetration testing, DevSecOps pipelines, and d
 │   │   ├── exposure.py          # Sensitive file & metadata exposure audit
 │   │   └── methods.py           # HTTP Methods & WebDAV audit
 │   └── reporters/
-│       ├── html_reporter.py     # Interactive, PDF-ready executive HTML dashboard
+│       ├── pdf_reporter.py      # Executive PDF document generator
+│       ├── html_reporter.py     # Interactive SVG executive HTML dashboard
 │       ├── markdown_reporter.py # GitHub / documentation Markdown report
 │       └── json_reporter.py     # Machine-readable JSON for CI/CD pipelines
 ├── reports/                     # Output directory for generated audit reports
@@ -55,52 +67,58 @@ Designed strictly for authorized penetration testing, DevSecOps pipelines, and d
 
 ---
 
-## ⚡ Quick Start
+## ⚡ Quick Start (CLI)
 
 ### 1. Audit a Website via CLI
 Run an audit by passing any domain or URL:
 ```bash
 python3 aegis.py example.com
 ```
-or with a full URL:
+
+### 2. Generate PDF and Open in Browser
 ```bash
-python3 aegis.py https://my-staging-site.com
+python3 aegis.py demo.testfire.net --format all --view
 ```
 
-### 2. Automatically Open the HTML Report in Browser
-```bash
-python3 aegis.py example.com --view
-```
-
-### 3. Launch the Interactive Web Dashboard
-Run the web dashboard where you can audit websites interactively from your browser:
+### 3. Launch Local Web Dashboard & API
 ```bash
 python3 aegis.py --serve
-# or directly:
+# or:
 python3 server.py
 ```
-Then navigate to: **`http://localhost:8080`**
+Open **`http://localhost:8080`** in your browser.
 
 ---
 
-## 🛠️ CLI Options
+## 🌐 Deploying to GitHub Pages (2 Steps)
 
-```text
-usage: aegis.py [-h] [-o OUTPUT_DIR] [-f {all,html,md,json}] [-t TIMEOUT] [--view] [--serve] [--port PORT] [target]
+The web dashboard is located in the **`docs/`** folder and can be hosted for free on GitHub Pages:
 
-AegisSec: End-to-End Website Security Auditor & Report Agent
+1. In your GitHub repository:
+   * Go to **Settings** → **Pages**.
+   * Under **Build and deployment**:
+     * **Source**: `Deploy from a branch`
+     * **Branch**: `main` | Folder: `/docs`
+   * Click **Save**.
+2. Your live web tool will be available at:
+   `https://deepakray184.github.io/aegis-sec/`
 
-positional arguments:
-  target                Target domain or URL (e.g. example.com or https://example.com)
+---
 
-options:
-  -h, --help            show this help message and exit
-  -o, --output-dir      Directory where reports are saved (default: ./reports)
-  -f, --format          Report output format: all, html, md, json (default: all)
-  -t, --timeout         HTTP/TLS request timeout in seconds (default: 8.0)
-  --view                Automatically open generated HTML report in default browser
-  --serve               Launch the local interactive Web Dashboard & Report Viewer
-  --port PORT           Web UI server port if using --serve (default: 8080)
+## ☁️ Deploying the Free Backend API
+
+To allow your GitHub Pages site to run audits from anywhere on the web:
+
+### Option A: 1-Click Deploy on Render.com (Free)
+1. Sign up on [Render.com](https://render.com) (free).
+2. Click **New** → **Blueprint** and connect your `aegis-sec` GitHub repository.
+3. Render will automatically detect `render.yaml` and deploy your API.
+4. On your GitHub Pages site, click the **Backend Status** badge and paste your Render URL (`https://your-service.onrender.com`).
+
+### Option B: Run with Docker
+```bash
+docker build -t aegis-sec .
+docker run -p 8080:8080 aegis-sec
 ```
 
 ---

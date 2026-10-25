@@ -34,6 +34,8 @@ class MarkdownReporter:
             f"| **Low / Info Notices** | **{s.low_count + s.info_count}** 🔵 |",
             f"| **Server Detected** | `{t.server_banner or 'Masked / Hidden'}` |",
             f"| **IP Addresses** | `{', '.join(t.ip_addresses) or 'N/A'}` |",
+            f"| **Network / ASN** | `{t.asn or t.isp or 'N/A'} ({t.city or ''}, {t.country or ''})` |",
+            f"| **Open Ports (Shodan)** | `{', '.join(map(str, t.open_ports)) if t.open_ports else 'None listed'}` |",
             "",
             "### OWASP Top 10 Distribution",
             "",

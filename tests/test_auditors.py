@@ -14,6 +14,7 @@ from aegis_core.models import Finding, Severity, Category, TargetInfo, AuditResu
 from aegis_core.scoring import calculate_audit_summary
 from aegis_core.modules.headers_auditor import HeadersAuditor
 from aegis_core.modules.cookies_cors import CookiesCORSAuditor
+from aegis_core.modules.shodan_auditor import ShodanAuditor
 from aegis_core.reporters.html_reporter import HTMLReporter
 from aegis_core.reporters.markdown_reporter import MarkdownReporter
 from aegis_core.reporters.json_reporter import JSONReporter
@@ -76,6 +77,37 @@ class TestCookiesAuditor(unittest.TestCase):
         self.assertIn("COOKIE-NO-SECURE-session_id", finding_ids)
         self.assertIn("COOKIE-NO-HTTPONLY-session_id", finding_ids)
         self.assertIn("COOKIE-NO-SAMESITE-session_id", finding_ids)
+
+
+class TestShodanAuditor(unittest.TestCase):
+    def test_private_ip_handling(self):
+        auditor = ShodanAuditor(["127.0.0.1", "192.168.1.1", "10.0.0.5"])
+        findings, details = auditor.audit()
+        self.assertEqual(len(findings), 0)
+        self.assertIn("No public IP addresses", details.get("note", ""))
+
+    def test_risky_port_and_cve_analysis(self):
+        auditor = ShodanAuditor(["8.8.8.8"])
+        # Mock responses
+        auditor._query_shodan_internetdb = lambda ip: {
+            "ports": [80, 443, 3306, 23],
+            "vulns": ["CVE-2023-1234"],
+            "tags": ["cloud"],
+            "cpes": ["cpe:/a:mysql:mysql"],
+        }
+        auditor._query_ip_intelligence = lambda ip: {
+            "country": "United States",
+            "city": "Mountain View",
+            "isp": "Google LLC",
+            "org": "Google LLC",
+            "as": "AS15169 Google LLC",
+        }
+        findings, details = auditor.audit()
+        finding_ids = [f.id for f in findings]
+        self.assertIn("SHODAN-PORT-EXPOSED-3306", finding_ids)
+        self.assertIn("SHODAN-PORT-EXPOSED-23", finding_ids)
+        self.assertIn("SHODAN-KNOWN-CVES", finding_ids)
+        self.assertIn("NET-INFRA-PROFILE", finding_ids)
 
 
 class TestScoringEngine(unittest.TestCase):

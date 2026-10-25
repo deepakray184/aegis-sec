@@ -24,6 +24,7 @@ from aegis_core.modules.dns_auditor import DNSAuditor
 from aegis_core.modules.cookies_cors import CookiesCORSAuditor
 from aegis_core.modules.exposure import ExposureAuditor
 from aegis_core.modules.methods import MethodsAuditor
+from aegis_core.modules.shodan_auditor import ShodanAuditor
 
 
 class SecurityAuditor:
@@ -65,7 +66,7 @@ class SecurityAuditor:
         # Step 4: Run audit modules in parallel
         self.progress_callback("AUDIT", "Executing parallel audit modules...")
 
-        with ThreadPoolExecutor(max_workers=6) as executor:
+        with ThreadPoolExecutor(max_workers=7) as executor:
             future_headers = executor.submit(
                 HeadersAuditor(initial_headers, status_code, normalized_url).audit
             )
@@ -84,6 +85,9 @@ class SecurityAuditor:
             future_methods = executor.submit(
                 MethodsAuditor(normalized_url, timeout=self.timeout).audit
             )
+            future_shodan = executor.submit(
+                ShodanAuditor(ip_addresses, timeout=self.timeout).audit
+            )
 
             module_futures = {
                 "headers": (future_headers, "HTTP Security Headers"),
@@ -92,6 +96,7 @@ class SecurityAuditor:
                 "cookies_cors": (future_cookies_cors, "Cookies & CORS Policy"),
                 "exposure": (future_exposure, "Information Exposure & Files"),
                 "methods": (future_methods, "HTTP Methods & WebDAV"),
+                "shodan": (future_shodan, "Network & Shodan Intelligence"),
             }
 
             for mod_key, (fut, label) in module_futures.items():
@@ -99,6 +104,15 @@ class SecurityAuditor:
                     mod_findings, mod_info = fut.result()
                     findings.extend(mod_findings)
                     module_details[mod_key] = mod_info
+                    if mod_key == "shodan" and isinstance(mod_info, dict):
+                        net = mod_info.get("network_info", {})
+                        target_info.asn = net.get("as")
+                        target_info.isp = net.get("isp")
+                        target_info.country = net.get("country")
+                        target_info.city = net.get("city")
+                        target_info.open_ports = mod_info.get("detected_open_ports", [])
+                        target_info.shodan_tags = mod_info.get("tags", [])
+                        target_info.shodan_vulns = mod_info.get("cves_found", [])
                     self.progress_callback("MODULE_DONE", f"Completed: {label} ({len(mod_findings)} findings)")
                 except Exception as e:
                     module_details[mod_key] = {"error": str(e)}

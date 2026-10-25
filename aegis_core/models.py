@@ -56,6 +56,7 @@ class Category(str, Enum):
     COOKIES_CORS = "Cookies & CORS Security"
     EXPOSURE = "Information Disclosure"
     HTTP_METHODS = "HTTP Methods & Server Config"
+    NETWORK_INTEL = "Network & Shodan Intelligence"
 
 
 @dataclass
@@ -91,6 +92,13 @@ class TargetInfo:
     server_banner: Optional[str] = None
     canonical_url: Optional[str] = None
     scan_timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"))
+    asn: Optional[str] = None
+    isp: Optional[str] = None
+    country: Optional[str] = None
+    city: Optional[str] = None
+    open_ports: List[int] = field(default_factory=list)
+    shodan_tags: List[str] = field(default_factory=list)
+    shodan_vulns: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

@@ -24,12 +24,21 @@ os.makedirs(REPORTS_DIR, exist_ok=True)
 
 
 class AegisWebHandler(SimpleHTTPRequestHandler):
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        self.end_headers()
+
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
         query = urllib.parse.parse_qs(parsed.query)
 
-        if path == "/" or path == "/index.html":
+        if path == "/health":
+            self._send_json({"status": "healthy", "service": "AegisSec API", "version": "2.0"})
+        elif path == "/" or path == "/index.html":
             self._serve_dashboard()
         elif path.startswith("/reports/"):
             filename = os.path.basename(path)
@@ -48,6 +57,23 @@ class AegisWebHandler(SimpleHTTPRequestHandler):
             self._handle_scan(target)
         else:
             self.send_error(404, "Page Not Found")
+
+    def do_POST(self):
+        parsed = urllib.parse.urlparse(self.path)
+        if parsed.path == "/api/scan":
+            content_length = int(self.headers.get("Content-Length", 0))
+            post_body = self.rfile.read(content_length).decode("utf-8")
+            try:
+                data = json.loads(post_body)
+                target = data.get("target", "")
+            except Exception:
+                target = ""
+            if not target:
+                self._send_json({"error": "Missing 'target' in JSON body"}, status=400)
+                return
+            self._handle_scan(target)
+        else:
+            self.send_error(404, "Endpoint not found")
 
     def _serve_dashboard(self):
         html_content = """<!DOCTYPE html>
@@ -226,6 +252,10 @@ class AegisWebHandler(SimpleHTTPRequestHandler):
                 "grade": result.summary.grade,
                 "total_findings": result.summary.total_findings,
                 "report_url": f"/reports/{html_file}",
+                "html_url": f"/reports/{html_file}",
+                "pdf_url": f"/reports/{pdf_file}",
+                "json_url": f"/reports/{base_filename}.json",
+                "result": result.to_dict(),
             })
         except Exception as e:
             self._send_json({"error": str(e)}, status=500)
@@ -239,9 +269,11 @@ class AegisWebHandler(SimpleHTTPRequestHandler):
                     stat = os.stat(fpath)
                     mod_time = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S")
                     size_kb = f"{round(stat.st_size / 1024, 1)} KB"
+                    base = fname.replace(".html", "")
                     reports.append({
-                        "name": fname.replace(".html", ""),
+                        "name": base,
                         "url": f"/reports/{fname}",
+                        "pdf_url": f"/reports/{base}.pdf" if os.path.exists(os.path.join(REPORTS_DIR, f"{base}.pdf")) else None,
                         "modified": mod_time,
                         "size": size_kb,
                     })
@@ -260,6 +292,7 @@ class AegisWebHandler(SimpleHTTPRequestHandler):
             with open(filepath, "rb") as f:
                 content = f.read()
             self.send_response(200)
+            self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Content-Type", f"{content_type}; charset=utf-8")
             self.send_header("Content-Length", str(len(content)))
             self.end_headers()
@@ -270,6 +303,7 @@ class AegisWebHandler(SimpleHTTPRequestHandler):
     def _send_html(self, content: str, status: int = 200):
         encoded = content.encode("utf-8")
         self.send_response(status)
+        self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(encoded)))
         self.end_headers()
@@ -278,6 +312,9 @@ class AegisWebHandler(SimpleHTTPRequestHandler):
     def _send_json(self, data: dict, status: int = 200):
         encoded = json.dumps(data).encode("utf-8")
         self.send_response(status)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(encoded)))
         self.end_headers()
@@ -288,11 +325,14 @@ class AegisWebHandler(SimpleHTTPRequestHandler):
         sys.stderr.write(f"[AegisSec Web] {args[0]} - {args[1]}\n")
 
 
-def start_dashboard(host: str = "127.0.0.1", port: int = 8080):
+def start_dashboard(host: str = "0.0.0.0", port: int = None):
+    if port is None:
+        port = int(os.environ.get("PORT", 8080))
+    host = os.environ.get("HOST", host)
     server = ThreadingHTTPServer((host, port), AegisWebHandler)
     url = f"http://{host}:{port}"
-    print(f"\n\033[32m\033[1m[+] AegisSec Web Dashboard live at:\033[0m \033[36m{url}\033[0m")
-    print(f"\033[90mPress Ctrl+C to stop the dashboard server.\033[0m\n")
+    print(f"\n\033[32m\033[1m[+] AegisSec Web API & Dashboard live at:\033[0m \033[36m{url}\033[0m")
+    print(f"\033[90mReady to handle requests from GitHub Pages or local browsers.\033[0m\n")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AegisSec - Website Security Auditor & Shodan Intelligence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gauge-bg { fill: none; stroke: #1e293b; stroke-width: 10; }
+        .gauge-fill { fill: none; stroke-width: 10; stroke-linecap: round; stroke-dasharray: 326.7; stroke-dashoffset: 326.7; transition: stroke-dashoffset 1s ease-in-out, stroke 0.5s ease; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-cyan-500 selection:text-white">
+
+    <!-- Top Navigation -->
+    <header class="border-b border-slate-800/80 bg-slate-900/50 backdrop-blur sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-lg shadow-lg shadow-cyan-500/20">
+                    🛡️
+                </div>
+                <div>
+                    <span class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">AegisSec</span>
+                    <span class="hidden sm:inline-block text-xs font-semibold px-2 py-0.5 ml-2 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/60">Cloud Edition</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button id="backendStatusBadge" onclick="toggleConfigModal(true)" class="px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-800 text-slate-300 border border-slate-700 hover:border-slate-500 transition">
+                    Checking Backend...
+                </button>
+                <a href="https://github.com/deepakray184/aegis-sec" target="_blank" class="p-2 text-slate-400 hover:text-white transition rounded-lg hover:bg-slate-800" title="GitHub Repository">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-5xl mx-auto px-4 py-10 space-y-10">
+
+        <!-- Hero Title -->
+        <div class="text-center space-y-3">
+            <h1 class="text-3xl sm:text-5xl font-black tracking-tight text-white">
+                Website Security & Shodan Intelligence
+            </h1>
+            <p class="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto">
+                Audits HTTP security headers, SSL/TLS encryption, DNS & email spoofing, and queries Shodan InternetDB for open ports & known vulnerabilities.
+            </p>
+        </div>
+
+        <!-- Search Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl relative">
+            <form onsubmit="runAudit(event)" class="space-y-4">
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <div class="relative flex-1">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-500 font-mono text-sm">https://</span>
+                        <input type="text" id="targetInput" placeholder="example.com or demo.testfire.net" required autofocus
+                            class="w-full bg-slate-950 border border-slate-800 rounded-xl py-3.5 pl-20 pr-4 text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500 text-sm transition">
+                    </div>
+                    <button type="submit" id="scanBtn" class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold px-7 py-3.5 rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 disabled:opacity-50">
+                        <span>Audit Target</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                    </button>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 pt-2 text-xs text-slate-500">
+                    <span>Try sample:</span>
+                    <button type="button" onclick="setTarget('example.com')" class="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-800 text-slate-300 rounded-md border border-slate-700/80 transition">example.com</button>
+                    <button type="button" onclick="setTarget('http://demo.testfire.net')" class="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-800 text-slate-300 rounded-md border border-slate-700/80 transition">demo.testfire.net</button>
+                </div>
+            </form>
+
+            <!-- Loading Spinner State -->
+            <div id="statusBox" class="hidden mt-6 p-5 bg-slate-950 border border-cyan-900/40 rounded-xl flex items-center gap-4">
+                <div class="w-6 h-6 border-2 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin shrink-0"></div>
+                <div>
+                    <div id="statusText" class="text-sm font-medium text-cyan-200">Initiating security assessment...</div>
+                    <div class="text-xs text-slate-500 mt-0.5">Querying DNS, Shodan, TLS, and HTTP response headers concurrently...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section (Dynamic) -->
+        <div id="resultsContainer" class="hidden space-y-8">
+
+            <!-- Executive Scorecard Banner -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 grid grid-cols-1 md:grid-cols-12 gap-8 items-center shadow-xl">
+                <!-- Circular Score Gauge -->
+                <div class="md:col-span-4 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-slate-800 pb-6 md:pb-0 md:pr-6">
+                    <div class="relative w-32 h-32 flex items-center justify-center">
+                        <svg class="w-32 h-32 -rotate-90" viewBox="0 0 120 120">
+                            <circle cx="60" cy="60" r="52" class="gauge-bg"></circle>
+                            <circle id="gaugeFill" cx="60" cy="60" r="52" class="gauge-fill"></circle>
+                        </svg>
+                        <div class="absolute flex flex-col items-center justify-center">
+                            <span id="scoreText" class="text-4xl font-extrabold text-white leading-none">0</span>
+                            <span class="text-xs text-slate-500 mt-1">/ 100</span>
+                        </div>
+                    </div>
+                    <div id="gradeBadge" class="mt-4 px-3 py-1 rounded-full text-xs font-bold border">
+                        Grade Loading...
+                    </div>
+                </div>
+
+                <!-- Target & Network Info -->
+                <div class="md:col-span-8 space-y-4">
+                    <div>
+                        <h2 id="targetDomain" class="text-2xl font-bold text-white">domain.com</h2>
+                        <a id="targetUrl" href="#" target="_blank" class="text-xs text-cyan-400 hover:underline">https://domain.com</a>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800/80">
+                            <span class="text-slate-500 block mb-0.5">Detected Server</span>
+                            <span id="targetServer" class="font-semibold text-slate-200">Apache / Nginx</span>
+                        </div>
+                        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800/80">
+                            <span class="text-slate-500 block mb-0.5">IP Addresses</span>
+                            <span id="targetIps" class="font-mono text-slate-200">0.0.0.0</span>
+                        </div>
+                        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800/80">
+                            <span class="text-slate-500 block mb-0.5">Network / ASN</span>
+                            <span id="targetAsn" class="font-semibold text-slate-200">AS1234 Cloud Provider</span>
+                        </div>
+                        <div class="bg-slate-950 p-3 rounded-lg border border-slate-800/80">
+                            <span class="text-slate-500 block mb-0.5">Scan Duration</span>
+                            <span id="scanDuration" class="font-semibold text-slate-200">1.2s</span>
+                        </div>
+                    </div>
+
+                    <!-- Shodan Open Ports & CVEs -->
+                    <div class="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-2">
+                        <div class="text-xs text-slate-400 font-semibold flex items-center justify-between">
+                            <span>🔍 Shodan InternetDB Open Ports</span>
+                            <span class="text-[10px] text-cyan-400">Live Reconnaissance</span>
+                        </div>
+                        <div id="shodanPorts" class="flex flex-wrap gap-1.5">
+                            <!-- Populated dynamically -->
+                        </div>
+                        <div id="shodanVulns"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Severity Counters Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
+                    <div>
+                        <div class="text-xs text-slate-500 uppercase font-semibold">Critical</div>
+                        <div id="kpiCritical" class="text-2xl font-bold text-red-500">0</div>
+                    </div>
+                    <span class="text-xl">🔴</span>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
+                    <div>
+                        <div class="text-xs text-slate-500 uppercase font-semibold">High</div>
+                        <div id="kpiHigh" class="text-2xl font-bold text-orange-500">0</div>
+                    </div>
+                    <span class="text-xl">🟠</span>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
+                    <div>
+                        <div class="text-xs text-slate-500 uppercase font-semibold">Medium</div>
+                        <div id="kpiMedium" class="text-2xl font-bold text-amber-500">0</div>
+                    </div>
+                    <span class="text-xl">🟡</span>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between">
+                    <div>
+                        <div class="text-xs text-slate-500 uppercase font-semibold">Low / Info</div>
+                        <div id="kpiLow" class="text-2xl font-bold text-blue-500">0</div>
+                    </div>
+                    <span class="text-xl">🔵</span>
+                </div>
+            </div>
+
+            <!-- Action Bar: Downloads & Export -->
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl flex flex-wrap items-center justify-between gap-3">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Executive Reports Ready:</span>
+                <div class="flex flex-wrap gap-2">
+                    <a id="btnDownloadPdf" href="#" target="_blank" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-red-600/20">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span>Download PDF</span>
+                    </a>
+                    <a id="btnDownloadHtml" href="#" target="_blank" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5">
+                        <span>Interactive HTML</span>
+                    </a>
+                    <a id="btnDownloadJson" href="#" target="_blank" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold transition">
+                        <span>JSON</span>
+                    </a>
+                    <button onclick="window.print()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold transition">
+                        <span>Print</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Analytics: OWASP Top 10 Breakdown -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                    <span>📊 OWASP Top 10:2021 Alignment</span>
+                </h3>
+                <div id="owaspList" class="space-y-3">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Findings Filter & Search Bar -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex flex-wrap gap-1.5">
+                    <button onclick="filterFindings('all')" data-sev="all" class="filter-pill px-3 py-1 rounded-lg text-xs font-semibold bg-cyan-600 text-white">All</button>
+                    <button onclick="filterFindings('critical')" data-sev="critical" class="filter-pill px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white">Critical</button>
+                    <button onclick="filterFindings('high')" data-sev="high" class="filter-pill px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white">High</button>
+                    <button onclick="filterFindings('medium')" data-sev="medium" class="filter-pill px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white">Medium</button>
+                    <button onclick="filterFindings('low')" data-sev="low" class="filter-pill px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white">Low</button>
+                    <button onclick="filterFindings('info')" data-sev="info" class="filter-pill px-3 py-1 rounded-lg text-xs font-semibold bg-slate-800 text-slate-400 hover:text-white">Info</button>
+                </div>
+
+                <input type="text" id="findingSearchInput" oninput="filterFindings(activeSeverityFilter)" placeholder="Search findings (e.g. CSP, Shodan, TLS)..."
+                    class="w-full sm:w-64 bg-slate-950 border border-slate-800 rounded-lg px-3.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500">
+            </div>
+
+            <!-- Findings Cards List -->
+            <div id="findingsCards" class="space-y-4">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Backend Configuration Modal -->
+    <div id="configModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                <h3 class="text-base font-bold text-white flex items-center gap-2">
+                    <span>⚙️ Backend API Endpoint</span>
+                </h3>
+                <button onclick="toggleConfigModal(false)" class="text-slate-400 hover:text-white text-lg">&times;</button>
+            </div>
+            
+            <p class="text-xs text-slate-400 leading-relaxed">
+                GitHub Pages connects to your deployed AegisSec Python API backend (Render, Railway, or local server) to run parallel audits and generate PDFs:
+            </p>
+
+            <div class="space-y-1.5">
+                <label class="text-xs font-semibold text-slate-300">Backend API URL</label>
+                <input type="text" id="backendUrlInput" placeholder="https://aegis-sec.onrender.com or http://localhost:8080"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500 font-mono">
+            </div>
+
+            <div class="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-1 text-xs text-slate-400">
+                <strong class="text-cyan-400 block">Deploying Backend (Free):</strong>
+                <span>1. Connect your GitHub repo to <strong>Render.com</strong> (using the included <code>render.yaml</code>).</span><br/>
+                <span>2. Paste your Render service URL here.</span>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="toggleConfigModal(false)" class="px-4 py-2 bg-slate-800 text-slate-300 text-xs font-semibold rounded-lg hover:bg-slate-700">Cancel</button>
+                <button onclick="saveBackendUrl()" class="px-4 py-2 bg-cyan-600 text-white text-xs font-semibold rounded-lg hover:bg-cyan-500">Save Endpoint</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
