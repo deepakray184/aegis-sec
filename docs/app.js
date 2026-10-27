@@ -229,6 +229,9 @@ function renderResults(data) {
     // OWASP Bars
     renderOwaspBreakdown(summary.owasp_breakdown || {}, summary.total_findings || 1);
 
+    // Render Technology Stack
+    renderTechStack(target.technologies || []);
+
     // Render Findings List
     filterFindings('all');
 
@@ -258,6 +261,34 @@ function renderOwaspBreakdown(breakdown, total) {
             </div>
         `;
     }).join('');
+}
+
+function renderTechStack(techs) {
+    const grid = document.getElementById('techStackGrid');
+    const badge = document.getElementById('techCountBadge');
+    if (!grid) return;
+
+    if (badge) {
+        badge.innerText = `${techs.length} Detected`;
+    }
+
+    if (techs.length === 0) {
+        grid.innerHTML = '<div class="col-span-full p-4 text-center text-xs text-slate-500 italic bg-slate-950/60 rounded-xl border border-slate-800/60">No client or server technology signatures matched.</div>';
+        return;
+    }
+
+    grid.innerHTML = techs.map(t => `
+        <div class="bg-slate-950 border border-slate-800/80 rounded-xl p-3.5 flex items-center justify-between gap-3 hover:border-slate-700 transition">
+            <div class="flex items-center gap-3 min-w-0">
+                <span class="text-xl shrink-0">${t.icon || '💻'}</span>
+                <div class="truncate">
+                    <div class="font-semibold text-xs text-white truncate">${escapeHtml(t.name)}</div>
+                    <div class="text-[11px] text-slate-400 truncate">${escapeHtml(t.category || 'Software')}</div>
+                </div>
+            </div>
+            ${t.version ? `<span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-cyan-950 border border-cyan-800 text-cyan-300 shrink-0">v${escapeHtml(t.version)}</span>` : ''}
+        </div>
+    `).join('');
 }
 
 function filterFindings(sev) {

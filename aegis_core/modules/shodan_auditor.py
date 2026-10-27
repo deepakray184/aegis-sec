@@ -168,9 +168,9 @@ class ShodanAuditor:
                             return {
                                 "country": data.get("country", ""),
                                 "city": data.get("city", ""),
-                                "isp": data.get("isp", data.get("connection", {}).get("isp", "")),
-                                "org": data.get("org", data.get("connection", {}).get("org", "")),
-                                "as": data.get("as", data.get("connection", {}).get("asn", "")),
+                                "isp": str(data.get("isp", data.get("connection", {}).get("isp", "")) or ""),
+                                "org": str(data.get("org", data.get("connection", {}).get("org", "")) or ""),
+                                "as": str(data.get("as", data.get("connection", {}).get("asn", "")) or ""),
                             }
             except Exception:
                 continue

@@ -49,6 +49,19 @@ class MarkdownReporter:
 
         lines.extend([
             "",
+            "### 💻 Detected Technology Stack & Libraries",
+            "",
+        ])
+
+        if t.technologies:
+            for tech in t.technologies:
+                ver_str = f" v{tech['version']}" if tech.get("version") else ""
+                lines.append(f"- **{tech['name']}**{ver_str} — _{tech.get('category', 'Library')}_")
+        else:
+            lines.append("_No specific client/server libraries fingerprinted._")
+
+        lines.extend([
+            "",
             "---",
             "",
             "## 🔍 Detailed Security Findings",

@@ -37,7 +37,7 @@ class HTMLReporter:
         loc_parts = [p for p in [t.city, t.country] if p]
         location_display = f" &bull; {html.escape(', '.join(loc_parts))}" if loc_parts else ""
         open_ports_display = html.escape(", ".join(map(str, t.open_ports))) if t.open_ports else "None flagged"
-        asn_display = html.escape(t.asn or t.isp or "N/A")
+        asn_display = html.escape(str(t.asn or t.isp or "N/A"))
 
         # Build Findings HTML
         findings_html = []
@@ -128,6 +128,7 @@ class HTMLReporter:
             ("exposure", "Information Exposure"),
             ("methods", "HTTP Methods"),
             ("shodan", "Network & Shodan Intel"),
+            ("tech", "Software & Libraries"),
         ]:
             mod_findings_cnt = sum(1 for f in r.findings if f.category.value.lower().startswith(label.lower()[:5]))
             mod_status_html.append(f"""
@@ -137,6 +138,22 @@ class HTMLReporter:
                 <span class="mod-cnt">{mod_findings_cnt} issues</span>
             </div>
             """)
+
+        # Build Tech Stack Badges HTML
+        tech_cards = []
+        for tech in t.technologies:
+            v_badge = f'<span class="tech-ver">v{html.escape(tech["version"])}</span>' if tech.get("version") else ""
+            tech_cards.append(f"""
+            <div class="tech-badge">
+                <span class="tech-icon">{tech.get('icon', '💻')}</span>
+                <div class="tech-info">
+                    <span class="tech-name">{html.escape(tech['name'])}</span>
+                    <span class="tech-cat">{html.escape(tech.get('category', 'Library'))}</span>
+                </div>
+                {v_badge}
+            </div>
+            """)
+        tech_stack_html = "".join(tech_cards) if tech_cards else "<p style='color:#94a3b8; font-size: 0.85rem;'>No specific client/server libraries fingerprinted.</p>"
 
         return f"""<!DOCTYPE html>
 <html lang="en">
@@ -400,6 +417,42 @@ class HTMLReporter:
             display: flex;
             align-items: center;
             gap: 8px;
+        }}
+
+        .tech-grid {{
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }}
+
+        .tech-badge {{
+            background: var(--bg-card);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: border-color 0.15s;
+        }}
+
+        .tech-badge:hover {{
+            border-color: var(--accent-cyan);
+        }}
+
+        .tech-icon {{ font-size: 1.3rem; }}
+        .tech-info {{ display: flex; flex-direction: column; flex: 1; }}
+        .tech-name {{ font-weight: 700; font-size: 0.88rem; color: #f8fafc; }}
+        .tech-cat {{ font-size: 0.72rem; color: var(--text-secondary); }}
+        .tech-ver {{
+            background: rgba(6, 182, 212, 0.15);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 6px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 2px 8px;
         }}
 
         .owasp-row {{
@@ -780,7 +833,16 @@ class HTMLReporter:
                 {mod_status_html[4]}
                 {mod_status_html[5]}
                 {mod_status_html[6] if len(mod_status_html) > 6 else ''}
+                {mod_status_html[7] if len(mod_status_html) > 7 else ''}
             </div>
+        </div>
+    </section>
+
+    <!-- Technology Stack Profiler Section -->
+    <section class="panel-card" style="margin-bottom: 24px;">
+        <h3>💻 Detected Technologies & Software Libraries ({len(t.technologies)})</h3>
+        <div class="tech-grid">
+            {tech_stack_html}
         </div>
     </section>
 

@@ -15,6 +15,7 @@ from aegis_core.scoring import calculate_audit_summary
 from aegis_core.modules.headers_auditor import HeadersAuditor
 from aegis_core.modules.cookies_cors import CookiesCORSAuditor
 from aegis_core.modules.shodan_auditor import ShodanAuditor
+from aegis_core.modules.tech_auditor import TechAuditor
 from aegis_core.reporters.html_reporter import HTMLReporter
 from aegis_core.reporters.markdown_reporter import MarkdownReporter
 from aegis_core.reporters.json_reporter import JSONReporter
@@ -108,6 +109,52 @@ class TestShodanAuditor(unittest.TestCase):
         self.assertIn("SHODAN-PORT-EXPOSED-23", finding_ids)
         self.assertIn("SHODAN-KNOWN-CVES", finding_ids)
         self.assertIn("NET-INFRA-PROFILE", finding_ids)
+
+
+class TestTechAuditor(unittest.TestCase):
+    def test_detect_wordpress_and_version_leak(self):
+        headers = {"Server": "nginx/1.18.0", "X-Pingback": "https://example.com/xmlrpc.php"}
+        html = '<meta name="generator" content="WordPress 6.4.2" /><link rel="stylesheet" href="/wp-content/themes/twentytwentyfour/style.css">'
+        auditor = TechAuditor(headers=headers, html_body=html)
+        findings, details = auditor.audit()
+
+        tech_names = [t["name"] for t in details["technologies"]]
+        self.assertIn("WordPress", tech_names)
+        self.assertIn("Nginx", tech_names)
+
+        # Check WordPress version was captured
+        wp_tech = next(t for t in details["technologies"] if t["name"] == "WordPress")
+        self.assertEqual(wp_tech["version"], "6.4.2")
+
+        # Check finding
+        finding_ids = [f.id for f in findings]
+        self.assertIn("TECH-WP-VERSION-LEAK", finding_ids)
+
+    def test_detect_react_and_nextjs(self):
+        headers = {"X-Powered-By": "Next.js", "Server": "cloudflare"}
+        html = '<div id="__next"><div id="root">Hello</div></div><script src="/_next/static/chunks/main.js"></script>'
+        auditor = TechAuditor(headers=headers, html_body=html)
+        findings, details = auditor.audit()
+
+        tech_names = [t["name"] for t in details["technologies"]]
+        self.assertIn("Next.js", tech_names)
+        self.assertIn("React", tech_names)
+        self.assertIn("Cloudflare", tech_names)
+
+    def test_detect_vulnerable_jquery_and_eol_php(self):
+        headers = {"X-Powered-By": "PHP/7.4.3", "Server": "Apache/2.4.41"}
+        html = '<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>'
+        auditor = TechAuditor(headers=headers, html_body=html)
+        findings, details = auditor.audit()
+
+        tech_names = [t["name"] for t in details["technologies"]]
+        self.assertIn("PHP", tech_names)
+        self.assertIn("jQuery", tech_names)
+        self.assertIn("Apache HTTP Server", tech_names)
+
+        finding_ids = [f.id for f in findings]
+        self.assertIn("TECH-EOL-PHP-7_4_3", finding_ids)
+        self.assertIn("TECH-VULN-JQUERY-3_4_1", finding_ids)
 
 
 class TestScoringEngine(unittest.TestCase):

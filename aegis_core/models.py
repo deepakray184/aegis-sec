@@ -57,6 +57,7 @@ class Category(str, Enum):
     EXPOSURE = "Information Disclosure"
     HTTP_METHODS = "HTTP Methods & Server Config"
     NETWORK_INTEL = "Network & Shodan Intelligence"
+    TECH_STACK = "Technology Stack & Software Profile"
 
 
 @dataclass
@@ -99,6 +100,7 @@ class TargetInfo:
     open_ports: List[int] = field(default_factory=list)
     shodan_tags: List[str] = field(default_factory=list)
     shodan_vulns: List[str] = field(default_factory=list)
+    technologies: List[Dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

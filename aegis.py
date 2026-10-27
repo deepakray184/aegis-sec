@@ -118,6 +118,11 @@ def main():
     if t.open_ports:
         print(f"  Open Ports (Shodan) : {C_YELLOW}{C_BOLD}{', '.join(map(str, t.open_ports))}{C_RESET}")
     print(f"  Detected Server     : {t.server_banner or 'Hidden / Cloudflare'}")
+    if t.technologies:
+        tech_str = ", ".join([f"{x['name']}" + (f" v{x['version']}" if x.get('version') else "") for x in t.technologies[:6]])
+        if len(t.technologies) > 6:
+            tech_str += f" (+{len(t.technologies) - 6} more)"
+        print(f"  Detected Tech Stack : {C_CYAN}{tech_str}{C_RESET}")
     print(f"  Audit Duration      : {s.duration_seconds}s")
     print(f"  Security Score      : {grade_color}{C_BOLD}{s.score} / 100{C_RESET}")
     print(f"  Security Grade      : {grade_color}{C_BOLD}{s.grade} ({s.grade_label}){C_RESET}")

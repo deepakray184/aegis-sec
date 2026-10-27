@@ -25,6 +25,7 @@ from aegis_core.modules.cookies_cors import CookiesCORSAuditor
 from aegis_core.modules.exposure import ExposureAuditor
 from aegis_core.modules.methods import MethodsAuditor
 from aegis_core.modules.shodan_auditor import ShodanAuditor
+from aegis_core.modules.tech_auditor import TechAuditor
 
 
 class SecurityAuditor:
@@ -57,7 +58,7 @@ class SecurityAuditor:
 
         # Step 3: Fetch initial HTTP response & headers
         self.progress_callback("FETCH", f"Connecting to {normalized_url}...")
-        initial_headers, status_code, server_banner = self._fetch_initial_response(normalized_url)
+        initial_headers, status_code, server_banner, html_body = self._fetch_initial_response(normalized_url)
         target_info.server_banner = server_banner
 
         findings: list[Finding] = []
@@ -66,7 +67,7 @@ class SecurityAuditor:
         # Step 4: Run audit modules in parallel
         self.progress_callback("AUDIT", "Executing parallel audit modules...")
 
-        with ThreadPoolExecutor(max_workers=7) as executor:
+        with ThreadPoolExecutor(max_workers=8) as executor:
             future_headers = executor.submit(
                 HeadersAuditor(initial_headers, status_code, normalized_url).audit
             )
@@ -88,6 +89,9 @@ class SecurityAuditor:
             future_shodan = executor.submit(
                 ShodanAuditor(ip_addresses, timeout=self.timeout).audit
             )
+            future_tech = executor.submit(
+                TechAuditor(initial_headers, html_body).audit
+            )
 
             module_futures = {
                 "headers": (future_headers, "HTTP Security Headers"),
@@ -97,6 +101,7 @@ class SecurityAuditor:
                 "exposure": (future_exposure, "Information Exposure & Files"),
                 "methods": (future_methods, "HTTP Methods & WebDAV"),
                 "shodan": (future_shodan, "Network & Shodan Intelligence"),
+                "tech": (future_tech, "Software & Technology Stack Profiler"),
             }
 
             for mod_key, (fut, label) in module_futures.items():
@@ -113,6 +118,8 @@ class SecurityAuditor:
                         target_info.open_ports = mod_info.get("detected_open_ports", [])
                         target_info.shodan_tags = mod_info.get("tags", [])
                         target_info.shodan_vulns = mod_info.get("cves_found", [])
+                    elif mod_key == "tech" and isinstance(mod_info, dict):
+                        target_info.technologies = mod_info.get("technologies", [])
                     self.progress_callback("MODULE_DONE", f"Completed: {label} ({len(mod_findings)} findings)")
                 except Exception as e:
                     module_details[mod_key] = {"error": str(e)}
@@ -170,10 +177,11 @@ class SecurityAuditor:
             pass
         return ips
 
-    def _fetch_initial_response(self, url: str) -> tuple[dict[str, str], int, Optional[str]]:
+    def _fetch_initial_response(self, url: str) -> tuple[dict[str, str], int, Optional[str], str]:
         headers: dict[str, str] = {}
         status_code = 200
         server_banner = None
+        html_body = ""
 
         req = urllib.request.Request(url, headers={"User-Agent": DEFAULT_USER_AGENT})
         try:
@@ -181,12 +189,26 @@ class SecurityAuditor:
                 status_code = resp.status
                 headers = dict(resp.headers)
                 server_banner = resp.headers.get("Server")
+                html_body = resp.read(131072).decode("utf-8", errors="replace")
         except urllib.error.HTTPError as e:
             status_code = e.code
             headers = dict(e.headers)
             server_banner = e.headers.get("Server")
-        except Exception as e:
-            # If initial connection fails over https, attempt http fallback
-            pass
+            try:
+                html_body = e.read(65536).decode("utf-8", errors="replace")
+            except Exception:
+                pass
+        except Exception:
+            if url.startswith("https://"):
+                try:
+                    http_url = "http://" + url[8:]
+                    http_req = urllib.request.Request(http_url, headers={"User-Agent": DEFAULT_USER_AGENT})
+                    with urllib.request.urlopen(http_req, timeout=self.timeout) as resp:
+                        status_code = resp.status
+                        headers = dict(resp.headers)
+                        server_banner = resp.headers.get("Server")
+                        html_body = resp.read(131072).decode("utf-8", errors="replace")
+                except Exception:
+                    pass
 
-        return headers, status_code, server_banner
+        return headers, status_code, server_banner, html_body
