@@ -180,9 +180,9 @@ Open **`http://localhost:8080`** in your browser.
 
 ---
 
-## 🌐 Deploying to GitHub Pages (2 Steps)
+## 🌐 GitHub Pages Deployment (Zero Setup Needed!)
 
-The web dashboard is located in the **`docs/`** folder and can be hosted for free on GitHub Pages:
+The web dashboard is located in the **`docs/`** folder and runs **100% autonomously on GitHub Pages with zero server backend required**:
 
 1. In your GitHub repository:
    * Go to **Settings** → **Pages**.
@@ -190,22 +190,35 @@ The web dashboard is located in the **`docs/`** folder and can be hosted for fre
      * **Source**: `Deploy from a branch`
      * **Branch**: `main` | Folder: `/docs`
    * Click **Save**.
-2. Your live web tool will be available at:  
+2. Your live website security auditor is instantly live at:  
    👉 **`https://deepakray184.github.io/aegis-sec/`**
+
+### How It Works Out-of-the-Box:
+- **Browser Cloud Engine (Default)**: Automatically queries Cloudflare DoH, Google DoH, Shodan InternetDB, and IP intelligence directly from the visitor's browser.
+- **Zero Server Cost**: Requires no servers, databases, or third-party paid keys to operate.
+- **Instant Client-Side Exports**: Generates Executive PDF (Print-ready), Standalone Interactive HTML reports, and JSON telemetry with one click.
 
 ---
 
-## ☁️ Deploying the Free Cloud Backend API
+## ☁️ Optional: Custom Python Backend API (Advanced)
 
-To allow your GitHub Pages site to run audits from anywhere on the web:
+If you want deep raw TCP socket TLS cipher verification, raw HTTP response header inspection, and Chromium PDF rendering:
 
-### Option A: 1-Click Deploy on Render.com (Free)
+### Option A: Local Backend
+```bash
+python3 server.py
+# Or:
+python3 aegis.py --serve
+```
+In your GitHub Pages dashboard, click the top status badge, switch to **Custom Python Backend API**, and enter `http://localhost:8080`.
+
+### Option B: 1-Click Deploy on Render.com (Free)
 1. Sign up for free at [Render.com](https://render.com).
 2. Click **New +** → **Blueprint** and select your `aegis-sec` GitHub repository.
 3. Render will automatically detect `render.yaml` and deploy your API.
-4. On your live GitHub Pages site, click the **Backend Status** badge at the top and paste your Render URL (`https://your-service.onrender.com`).
+4. On your live GitHub Pages site, click the top status badge and paste your Render URL (`https://your-service.onrender.com`).
 
-### Option B: Run with Docker
+### Option C: Run with Docker
 ```bash
 docker build -t aegis-sec .
 docker run -p 8080:8080 aegis-sec
