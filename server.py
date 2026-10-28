@@ -39,7 +39,17 @@ class AegisWebHandler(SimpleHTTPRequestHandler):
         if path == "/health":
             self._send_json({"status": "healthy", "service": "AegisSec API", "version": "2.0"})
         elif path == "/" or path == "/index.html":
-            self._serve_dashboard()
+            root_index = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
+            if os.path.exists(root_index):
+                self._serve_file(root_index)
+            else:
+                self._serve_dashboard()
+        elif path == "/app.js":
+            root_js = os.path.join(os.path.dirname(os.path.abspath(__file__)), "app.js")
+            if os.path.exists(root_js):
+                self._serve_file(root_js)
+            else:
+                self.send_error(404, "app.js not found")
         elif path.startswith("/reports/"):
             filename = os.path.basename(path)
             file_path = os.path.join(REPORTS_DIR, filename)
@@ -287,6 +297,8 @@ class AegisWebHandler(SimpleHTTPRequestHandler):
             content_type = "text/markdown"
         elif filepath.endswith(".pdf"):
             content_type = "application/pdf"
+        elif filepath.endswith(".js"):
+            content_type = "application/javascript"
 
         try:
             with open(filepath, "rb") as f:
